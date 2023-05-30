@@ -1,5 +1,6 @@
 package com.onito.MoviesRatingsApi.Controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,18 +48,32 @@ public class MoviesRatingApiController {
 				+ "on (movies.tconst=ratings.tconst AND average_rating > 6.0) " + "ORDER BY average_rating";
 		return jdbcTemplet.query(query, new BeanPropertyRowMapper<>(TopRatedMovie.class));
 	}
-
+	
 	@GetMapping("/api/v1/genre-movies-with-subtotals")
-	MovieWithSubtotal getGenrewiseMovieWithSubtotal() {
+	MovieWithSubTotalList getGenrewiseMovieWithSubtotal() {
 		String query1 = "SELECT genres, primary_title, num_votes from movies INNER JOIN ratings "
 				+ "on (movies.tconst=ratings.tconst) ORDER BY genres DESC";
 		String query2 = "SELECT genres, SUM(num_votes) AS total_votes " + "from movies INNER JOIN ratings "
 				+ "on (movies.tconst=ratings.tconst) " + "GROUP BY genres ORDER BY genres DESC";
-		List<MovieWithGenrewise> movie = jdbcTemplet.query(query1,
+		
+		List<MovieWithGenrewise> movieWithGenrewise = jdbcTemplet.query(query1,
 				new BeanPropertyRowMapper<>(MovieWithGenrewise.class));
 		List<Subtotal> subTotal = jdbcTemplet.query(query2, new BeanPropertyRowMapper<>(Subtotal.class));
-
-		return new MovieWithSubtotal(movie, subTotal);
+		
+		List<MovieWithSubtotal> movieWithSubtotalList = new ArrayList<>();
+		for(Subtotal subtotal: subTotal) {
+			String genres = subtotal.getGenres();
+			List<MovieWithGenrewise> movieWithGenrewise1 = new ArrayList<>();
+			List<Subtotal> subTotal1 = new ArrayList<>();
+			subTotal1.add(subtotal);
+			for(MovieWithGenrewise movieWithGenres: movieWithGenrewise) {
+				if(movieWithGenres.getGenres().equalsIgnoreCase(genres)) {
+					movieWithGenrewise1.add(movieWithGenres);
+				}
+			}
+			movieWithSubtotalList.add(new MovieWithSubtotal(movieWithGenrewise1, subTotal1));
+		}
+		return new MovieWithSubTotalList(movieWithSubtotalList);
 
 	}
 
